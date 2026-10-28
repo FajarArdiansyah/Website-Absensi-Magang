@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e11d48">
+<title>Absensi Karyawan</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --primary:#e11d48; --primary-dark:#be123c; --pink:#fb7185; --pink-soft:#fff1f2;
+  --dark:#1e293b; --text:#334155; --muted:#94a3b8; --line:#e2e8f0; --bg:#f8fafc;
+  --green:#16a34a; --orange:#f59e0b; --blue:#2563eb; --purple:#7c3aed; --teal:#0d9488;
+  --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45}
+button{font-family:inherit;cursor:pointer;border:none}
+input,select,textarea{font-family:inherit;font-size:14px}
+.hidden{display:none !important}
+
+/* ---------- LOGIN ---------- */
+#loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden;
+  background:
+    radial-gradient(circle at 15% 12%,rgba(251,113,133,.55) 0,transparent 42%),
+    radial-gradient(circle at 88% 22%,rgba(244,63,94,.45) 0,transparent 40%),
+    radial-gradient(circle at 70% 92%,rgba(253,164,175,.6) 0,transparent 45%),
+    linear-gradient(160deg,#fff1f2 0%,#ffe4e6 45%,#fecdd3 100%)}
+#loginView::before,#loginView::after{content:"";position:absolute;border-radius:50%;pointer-events:none;animation:floaty 9s ease-in-out infinite}
+#loginView::before{width:320px;height:320px;top:-110px;left:-90px;background:linear-gradient(135deg,#e11d48,#fb7185);opacity:.28}
+#loginView::after{width:260px;height:260px;bottom:-90px;right:-70px;background:linear-gradient(135deg,#fb7185,#fda4af);opacity:.4;animation-delay:-4s}
+@keyframes floaty{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(18px,-22px) scale(1.06)}}
+.login-bg-dots{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(190,18,60,.16) 1.4px,transparent 1.4px);background-size:26px 26px;-webkit-mask-image:linear-gradient(180deg,#000 0,transparent 60%);mask-image:linear-gradient(180deg,#000 0,transparent 60%)}
+.login-card{width:100%;max-width:380px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:32px 26px;box-shadow:0 18px 50px rgba(190,18,60,.18),0 2px 8px rgba(15,23,42,.06);position:relative;z-index:1}
+.login-card h1{font-size:26px;color:var(--dark);margin-bottom:22px;text-align:center}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--dark);outline:none;transition:.2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(225,29,72,.12)}
+.field textarea{resize:vertical;min-height:80px}
+.btn{width:100%;padding:13px;border-radius:10px;font-weight:700;font-size:14px;transition:.2s}
+.btn-dark{background:var(--dark);color:#fff}
+.btn-dark:hover{background:#0f172a}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-outline{background:#fff;color:var(--dark);border:1px solid var(--line);margin-top:10px}
+.btn-outline:hover{background:#f8fafc}
+.btn-green{background:var(--green);color:#fff}
+.btn-sm{width:auto;padding:8px 14px;font-size:12px;border-radius:8px}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.login-err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:10px 12px;border-radius:10px;font-size:12px;margin-bottom:14px}
+
+/* ---------- APP SHELL (MOBILE FIRST) ---------- */
+#appView{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:84px}
+.header{background:linear-gradient(135deg,var(--primary) 0%,var(--pink) 100%);color:#fff;padding:16px 18px 70px;border-radius:0 0 34px 34px;position:relative}
+.header-top{display:flex;align-items:center;justify-content:space-between}
+.icon-btn{background:rgba(255,255,255,.2);color:#fff;width:40px;height:40px;border-radius:12px;font-size:20px;display:flex;align-items:center;justify-content:center}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:.3px}
+.logo-mark{width:32px;height:32px;border-radius:10px;background:#fff;color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:900}
+.avatar{width:40px;height:40px;border-radius:50%;background:#fff;color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;border:2px solid rgba(255,255,255,.6)}
+.page-title{margin-top:18px;font-size:18px;font-weight:700}
+.content{padding:0 16px;margin-top:-52px;position:relative}
+.card{background:#fff;border-radius:var(--radius);padding:16px;box-shadow:0 4px 18px rgba(15,23,42,.06);margin-bottom:14px}
+.card h3{font-size:15px;color:var(--dark);margin-bottom:12px}
+.greet small{opacity:.8;font-size:12px;color:var(--muted)}
+.greet h2{font-size:19px;color:var(--dark);margin:2px 0 8px}
+.greet .time{font-size:12px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--pink-soft);color:var(--primary);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-top:8px}
+.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center}
+.quick button{background:none;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text)}
+.quick .ico{width:48px;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.12)}
+.status-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.status-box{border-radius:14px;padding:14px;color:#fff}
+.status-box.in{background:linear-gradient(135deg,#16a34a,#4ade80)}
+.status-box.out{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+.status-box small{display:block;opacity:.9;font-size:11px}
+.status-box b{font-size:22px;display:block;margin:2px 0}
+.status-box span{font-size:11px;opacity:.95}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{border-radius:14px;padding:14px;background:#f8fafc;border:1px solid var(--line)}
+.stat b{font-size:26px;display:block}
+.stat small{color:var(--muted);font-size:12px}
+.stat.s1 b{color:var(--green)} .stat.s2 b{color:var(--orange)} .stat.s3 b{color:var(--blue)} .stat.s4 b{color:var(--primary)}
+
+/* bottom nav */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:30;box-shadow:0 -4px 16px rgba(15,23,42,.05)}
+.bottom-nav button{background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:600;padding:4px 0}
+.bottom-nav button .i{font-size:20px}
+.bottom-nav button.active{color:var(--primary)}
+.bottom-nav .fab{position:relative;top:-18px}
+.bottom-nav .fab .i{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--pink));color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 6px 16px rgba(225,29,72,.4)}
+.bottom-nav .fab span{margin-top:-2px}
+
+/* drawer */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:40;opacity:0;pointer-events:none;transition:.25s}
+.overlay.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:78%;max-width:300px;background:#fff;z-index:50;transform:translateX(-100%);transition:.28s;display:flex;flex-direction:column}
+.drawer.show{transform:none}
+.drawer-head{background:linear-gradient(135deg,var(--primary),var(--pink));color:#fff;padding:30px 20px 22px;border-radius:0 0 26px 0}
+.drawer-head .avatar{width:56px;height:56px;font-size:20px;margin-bottom:10px}
+.drawer-head b{display:block;font-size:16px}
+.drawer-head small{opacity:.9}
+.drawer nav{padding:12px;flex:1;overflow:auto}
+.drawer nav button{width:100%;text-align:left;background:none;padding:13px 12px;border-radius:12px;font-size:14px;font-weight:600;color:var(--text);display:flex;gap:12px;align-items:center}
+.drawer nav button:hover{background:var(--pink-soft);color:var(--primary)}
+.drawer .logout{margin:12px}
+
+/* forms & lists */
+.cam-wrap{position:relative;background:#0f172a;border-radius:14px;overflow:hidden;aspect-ratio:3/4;max-height:380px;margin:0 auto 12px}
+.cam-wrap video,.cam-wrap img,.cam-wrap canvas{width:100%;height:100%;object-fit:cover;display:block}
+.cam-wrap video{transform:scaleX(-1)}
+.cam-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;text-align:center;padding:20px;font-size:13px}
+.geo-box{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:12px;padding:10px 12px;font-size:12px;margin-bottom:12px}
+.geo-box.err{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.list-item{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.list-item:last-child{border-bottom:none}
+.list-item img{width:46px;height:46px;border-radius:12px;object-fit:cover;background:#e2e8f0}
+.li-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--pink-soft)}
+.li-body{flex:1;min-width:0}
+.li-body b{display:block;color:var(--dark);font-size:13.5px}
+.li-body small{color:var(--muted);font-size:11.5px;display:block}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.b-green{background:#dcfce7;color:#166534}.b-orange{background:#fef3c7;color:#92400e}.b-red{background:#fee2e2;color:#991b1b}.b-blue{background:#dbeafe;color:#1e40af}.b-gray{background:#e2e8f0;color:#475569}
+.tabs{display:flex;gap:6px;margin-bottom:12px;overflow:auto}
+.tabs button{padding:8px 14px;border-radius:999px;background:#f1f5f9;color:var(--text);font-weight:600;font-size:12px;white-space:nowrap}
+.tabs button.active{background:var(--primary);color:#fff}
+.empty{text-align:center;color:var(--muted);padding:24px 0;font-size:13px}
+.profile-top{text-align:center;margin-bottom:12px}
+.profile-top .avatar{width:74px;height:74px;font-size:26px;margin:0 auto 8px;background:var(--pink-soft);border-color:var(--pink)}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.kv:last-child{border-bottom:none}
+.kv span{color:var(--muted)} .kv b{color:var(--dark);text-align:right}
+
+/* admin */
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+td img{width:34px;height:34px;border-radius:8px;object-fit:cover;cursor:pointer}
+.row-actions{display:flex;gap:6px}
+.admin-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input,.toolbar select{padding:9px 10px;border:1px solid var(--line);border-radius:10px;font-size:12px;flex:1;min-width:120px}
+.print-head{display:none}
+
+/* approval */
+.appr-item{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
+.appr-item:last-of-type{border-bottom:none}
+.appr-item .li-body{min-width:200px}
+.appr-item .li-body small{white-space:normal}
+.nbadge{background:var(--primary);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 7px;margin-left:auto;line-height:1.5}
+.bottom-nav button{position:relative}
+.bottom-nav .nbadge{position:absolute;top:0;right:16%;margin:0}
+.dlg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:95;display:flex;align-items:center;justify-content:center;padding:18px}
+.dlg-card{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25);animation:fade .2s}
+.dlg-card h3{font-size:16px;color:var(--dark);margin-bottom:10px}
+
+/* toast & modal */
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.25s;z-index:100;max-width:88%;text-align:center;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal img{max-width:100%;max-height:90vh;border-radius:12px}
+.spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade{animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- RESPONSIVE ---------- */
+/* HP kecil */
+@media(max-width:380px){
+  .quick .ico{width:42px;height:42px;font-size:19px}
+  .quick button{font-size:10px}
+  .header{padding:14px 14px 64px}
+  .content{padding:0 12px}
+  .status-box b{font-size:19px}
+}
+/* Tablet */
+@media(min-width:600px) and (max-width:899px){
+  #appView,#appView.admin-mode{max-width:760px}
+  .bottom-nav{max-width:760px}
+  .admin-stats{grid-template-columns:repeat(4,1fr)}
+}
+/* Desktop: sidebar tetap di kiri, konten melebar */
+@media(min-width:900px){
+  body.logged .drawer{transform:none !important;width:260px;box-shadow:2px 0 20px rgba(15,23,42,.08);border-right:1px solid var(--line)}
+  body.logged .drawer-head{border-radius:0 0 28px 0}
+  .overlay{display:none}
+  #btnMenu{display:none}
+  .bottom-nav{display:none !important}
+  #appView,#appView.admin-mode{max-width:none;margin:0 0 0 260px;padding-bottom:36px}
+  .header{padding:22px 44px 86px;border-radius:0 0 42px 42px}
+  .page-title{font-size:22px;margin-top:22px}
+  .content{max-width:1080px;margin:-58px auto 0;padding:0 32px}
+  .toast{bottom:36px}
+  .admin-stats{grid-template-columns:repeat(4,1fr);gap:14px}
+  .card{padding:22px}
+  /* Beranda: dua kolom */
+  #content[data-v="home"]{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:start}
+  #content[data-v="home"]>.card:nth-child(-n+2){grid-column:1/-1}
+  .quick .ico{width:58px;height:58px;font-size:26px}
+  .quick button{font-size:13px}
+  /* Halaman form: dibatasi agar tidak terlalu lebar */
+  #content[data-v="absen"],#content[data-v="kunjungan"],#content[data-v="izin"],#content[data-v="profil"],#content[data-v="histori"]{max-width:720px}
+  .cam-wrap{max-height:460px}
+  /* Tabel admin lebih lega */
+  table{font-size:13px}
+  th,td{padding:11px 14px}
+}
+/* Layar sangat lebar */
+@media(min-width:1500px){
+  .content{max-width:1240px}
+}
+
+/* ---------- PRINT ---------- */
+@media print{
+  body{background:#fff}
+  .header,.bottom-nav,.drawer,.overlay,.noprint,.toast,.tabs,.toolbar{display:none !important}
+  #appView,#appView.admin-mode{max-width:none !important;margin:0 !important;padding:0 !important}
+  .content{margin:0 !important;padding:0 !important;max-width:none !important}
+  .card{box-shadow:none;border:none;padding:0}
+  .print-head{display:block !important;text-align:center;margin-bottom:14px}
+  .print-head h2{font-size:18px}
+  .table-wrap{border:none;overflow:visible}
+  table{font-size:10px}
+  th,td{border:1px solid #999;white-space:normal}
+  td img{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginView">
+  <div class="login-bg-dots"></div>
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <h1>Masuk</h1>
+    <div id="loginErr" class="login-err hidden"></div>
+    <div class="field">
+      <label for="inEmail">E-mail</label>
+      <input type="email" id="inEmail" placeholder="nama@email.com" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="inPass">Password</label>
+      <input type="password" id="inPass" placeholder="Masukkan password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn btn-dark" id="btnLogin">Masuk</button>
+    <button type="button" class="btn btn-outline" id="btnReset">Bersihkan Isian</button>
+  </form>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appView" class="hidden">
+  <div class="header">
+    <div class="header-top">
+      <button class="icon-btn" id="btnMenu" aria-label="Menu">&#9776;</button>
+      <div class="logo"><div class="logo-mark">A</div> ABSENSI</div>
+      <div class="avatar" id="hdrAvatar" onclick="go('profil')" style="cursor:pointer">?</div>
+    </div>
+    <div class="page-title" id="pageTitle">Beranda</div>
+  </div>
+  <div class="content" id="content"></div>
+
+  <nav class="bottom-nav" id="bottomNav"></nav>
+</div>
+
+<!-- Drawer -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="avatar" id="drAvatar">?</div>
+    <b id="drName">-</b>
+    <small id="drRole">-</small>
+  </div>
+  <nav id="drNav"></nav>
+  <div class="logout"><button class="btn btn-primary" id="btnLogout">Keluar</button></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   KONFIGURASI SUPABASE
+   ========================================================= */
+const SUPABASE_URL = "https://mbzrjiuhqqevsqslhjvp.supabase.co/rest/v1/";
+const SUPABASE_KEY = "sb_publishable_AanlI_T1vCdJv2oTJFLWfA_9viy1_Hf";
+const TABLE = "ardi";
+// SDK membutuhkan base URL project (tanpa /rest/v1/)
+const BASE_URL = SUPABASE_URL.replace(/\/rest\/v1\/?$/, "");
+const sb = window.supabase.createClient(BASE_URL, SUPABASE_KEY);
+
+/* Akun khusus & password default */
+const DEFAULT_EMP_PASS = "123456";
+const SPECIAL = {
+  "admin@gmail.com": { pass: "admin123", role: "admin", nama: "Administrator", jabatan: "Admin Sistem" },
+  "hrd@gmail.com":   { pass: "hrd123",   role: "hrd",   nama: "HRD",           jabatan: "Human Resource" }
+};
+
+/* Jadwal kerja */
+const WORK = { start: "08:00", end: "17:00", lateAfter: "08:15" };
+
+/* =========================================================
+   UTIL
+   ========================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const fmtTanggal = s => { const d = new Date(s + "T00:00:00"); return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`; };
+const fmtShort = s => { const d = new Date(s + "T00:00:00"); return `${d.getDate()} ${BULAN[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`; };
+
+function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch (e) { toast("Penyimpanan lokal penuh. Hapus data lama."); return false; }
+}
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2800);
+}
+function getField(row, name) {
+  if (!row) return "";
+  if (row[name] !== undefined && row[name] !== null) return row[name];
+  const k = Object.keys(row).find(x => x.trim().toLowerCase() === name.toLowerCase());
+  return k ? (row[k] ?? "") : "";
+}
+function initials(n) { return String(n || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?"; }
+function sapaan() {
+  const h = new Date().getHours();
+  if (h < 11) return "Selamat Pagi";
+  if (h < 15) return "Selamat Siang";
+  if (h < 18) return "Selamat Sore";
+  return "Selamat Malam";
+}
+function viewPhoto(src) {
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<img src="${src}" alt="foto">`; m.onclick = () => m.remove(); document.body.appendChild(m);
+}
+
+/* =========================================================
+   DATA LOKAL (absensi, izin, kunjungan, password)
+   ========================================================= */
+const DB = {
+  att: () => load("abs_att", []),
+  leave: () => load("abs_leave", []),
+  visit: () => load("abs_visit", []),
+  pw: () => load("abs_pw", {}),
+  saveAtt: v => save("abs_att", v),
+  saveLeave: v => save("abs_leave", v),
+  saveVisit: v => save("abs_visit", v),
+  savePw: v => save("abs_pw", v)
+};
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let user = load("abs_session", null);
+let view = "home";
+let histTab = "absen";
+let adminTab = "ringkas";
+let camStream = null;
+let capturedPhoto = null;
+let geo = null;
+let employeesCache = null;
+let clockTimer = null;
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = $("#inEmail").value.trim().toLowerCase();
+  const pass = $("#inPass").value;
+  const errBox = $("#loginErr"); errBox.classList.add("hidden");
+  const btn = $("#btnLogin"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const pwMap = DB.pw();
+  try {
+    if (SPECIAL[email]) {
+      const s = SPECIAL[email];
+      const validPass = pwMap[email] || s.pass;
+      if (pass !== validPass) throw new Error("E-mail atau password salah.");
+      user = { role: s.role, email, nama: s.nama, jabatan: s.jabatan, kode: "-", supervisor: "-", lokasi: "-" };
+    } else {
+      const { data, error } = await sb.from(TABLE).select("*").ilike("email", email).limit(5);
+      if (error) throw new Error("Gagal terhubung ke database: " + error.message);
+      const row = (data || []).find(r => String(getField(r, "email")).trim().toLowerCase() === email);
+      if (!row) throw new Error("E-mail tidak terdaftar.");
+      const validPass = pwMap[email] || DEFAULT_EMP_PASS;
+      if (pass !== validPass) throw new Error("E-mail atau password salah.");
+      user = {
+        role: "karyawan", email,
+        kode: getField(row, "Kode Karyawan"), nama: getField(row, "Nama"),
+        jabatan: getField(row, "Jabatan"), supervisor: getField(row, "Supervisor"),
+        lokasi: getField(row, "Lokasi Penempatan")
+      };
+    }
+    save("abs_session", user);
+    startApp();
+  } catch (err) {
+    errBox.textContent = err.message || "Terjadi kesalahan."; errBox.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btn.textContent = "Masuk";
+  }
+});
+$("#btnReset").onclick = () => { $("#inEmail").value = ""; $("#inPass").value = ""; $("#loginErr").classList.add("hidden"); $("#inEmail").focus(); };
+
+function logout() {
+  stopCam(); closeDrawer();
+  localStorage.removeItem("abs_session"); user = null; view = "home";
+  clearInterval(clockTimer);
+  document.body.classList.remove("logged");
+  $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden");
+  $("#inPass").value = "";
+}
+$("#btnLogout").onclick = logout;
+
+/* =========================================================
+   APP START / NAV
+   ========================================================= */
+function isAdmin() { return user && (user.role === "admin" || user.role === "hrd"); }
+
+function startApp() {
+  $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  document.body.classList.add("logged");
+  $("#appView").classList.toggle("admin-mode", isAdmin());
+  $("#hdrAvatar").textContent = initials(user.nama);
+  $("#drAvatar").textContent = initials(user.nama);
+  $("#drName").textContent = user.nama;
+  $("#drRole").textContent = isAdmin() ? (user.role === "admin" ? "Administrator" : "HRD") : (user.jabatan || "Karyawan");
+  buildNav();
+  go(isAdmin() ? "dash" : "home");
+}
+
+function buildNav() {
+  const bn = $("#bottomNav"), dn = $("#drNav");
+  if (isAdmin()) {
+    bn.style.gridTemplateColumns = "repeat(4,1fr)";
+    bn.innerHTML = `
+      <button data-v="dash"><span class="i">&#128202;</span>Dashboard</button>
+      <button data-v="adm_absen"><span class="i">&#128197;</span>Absensi</button>
+      <button data-v="adm_izin"><span class="i">&#128221;</span>Izin</button>
+      <button data-v="profil"><span class="i">&#128100;</span>Profil</button>`;
+    dn.innerHTML = `
+      <button data-v="dash">&#128202; Dashboard</button>
+      <button data-v="adm_absen">&#128197; Data Absensi</button>
+      <button data-v="adm_izin">&#128221; Pengajuan Izin</button>
+      <button data-v="adm_kar">&#128101; Data Karyawan</button>
+      <button data-v="adm_lap">&#128424; Laporan &amp; Cetak</button>
+      <button data-v="profil">&#128100; Profil &amp; Password</button>`;
+  } else {
+    bn.style.gridTemplateColumns = "repeat(5,1fr)";
+    bn.innerHTML = `
+      <button data-v="home"><span class="i">&#127968;</span>Beranda</button>
+      <button data-v="izin"><span class="i">&#128221;</span>Izin</button>
+      <button data-v="absen" class="fab"><span class="i">&#128247;</span><span>Absen</span></button>
+      <button data-v="histori"><span class="i">&#128338;</span>Histori</button>
+      <button data-v="profil"><span class="i">&#128100;</span>Profil</button>`;
+    dn.innerHTML = `
+      <button data-v="home">&#127968; Beranda</button>
+      <button data-v="absen">&#128247; Absen Masuk / Pulang</button>
+      <button data-v="kunjungan">&#128205; Kunjungan</button>
+      <button data-v="izin">&#128221; Izin &amp; Cuti</button>
+      <button data-v="histori">&#128338; Histori</button>
+      <button data-v="profil">&#128100; Profil &amp; Password</button>`;
+  }
+  [...bn.querySelectorAll("button"), ...dn.querySelectorAll("button")].forEach(b => b.onclick = () => { closeDrawer(); go(b.dataset.v); });
+}
+
+function openDrawer() { $("#drawer").classList.add("show"); $("#overlay").classList.add("show"); }
+function closeDrawer() { $("#drawer").classList.remove("show"); $("#overlay").classList.remove("show"); }
+$("#btnMenu").onclick = openDrawer; $("#overlay").onclick = closeDrawer;
+
+const TITLES = {
+  home: "Beranda", absen: "Absensi", kunjungan: "Kunjungan", izin: "Izin & Cuti", histori: "Histori",
+  profil: "Profil", dash: "Dashboard", adm_absen: "Data Absensi", adm_izin: "Pengajuan Izin", adm_kar: "Data Karyawan", adm_lap: "Laporan"
+};
+
+function go(v) {
+  stopCam(); capturedPhoto = null; clearInterval(clockTimer);
+  view = v;
+  $("#pageTitle").textContent = TITLES[v] || "";
+  $("#bottomNav").querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.v === v));
+  const c = $("#content"); c.dataset.v = v; c.classList.remove("fade"); void c.offsetWidth; c.classList.add("fade");
+  updateBadge();
+  window.scrollTo(0, 0);
+  const map = {
+    home: renderHome, absen: renderAbsen, kunjungan: renderKunjungan, izin: renderIzin, histori: renderHistori, profil: renderProfil,
+    dash: renderDash, adm_absen: renderAdmAbsen, adm_izin: renderAdmIzin, adm_kar: renderAdmKar, adm_lap: renderAdmLap
+  };
+  (map[v] || renderHome)();
+}
+
+/* =========================================================
+   LOGIKA ABSENSI
+   ========================================================= */
+function myAtt() { return DB.att().filter(a => a.email === user.email); }
+function todayAtt(email) { const t = ymd(new Date()); return DB.att().filter(a => a.email === (email || user.email) && a.tanggal === t); }
+function findToday(type) { return todayAtt().find(a => a.tipe === type); }
+function statusMasuk(jam) { return jam > WORK.lateAfter ? "Terlambat" : "Tepat Waktu"; }
+
+function monthStats(email) {
+  const now = new Date(); const y = now.getFullYear(), m = now.getMonth();
+  const prefix = `${y}-${pad(m + 1)}`;
+  const att = DB.att().filter(a => a.email === email && a.tanggal.startsWith(prefix) && a.tipe === "masuk");
+  const hadir = new Set(att.map(a => a.tanggal)).size;
+  const telat = att.filter(a => a.status === "Terlambat").length;
+  const leaves = DB.leave().filter(l => l.email === email && l.status === "Disetujui");
+  let izin = 0;
+  leaves.forEach(l => {
+    let d = new Date(l.mulai + "T00:00:00"); const e = new Date(l.selesai + "T00:00:00");
+    while (d <= e) { if (d.getMonth() === m && d.getFullYear() === y && d.getDay() !== 0 && d.getDay() !== 6) izin++; d.setDate(d.getDate() + 1); }
+  });
+  // hari kerja yang sudah lewat (sebelum hari ini)
+  let kerja = 0;
+  for (let d = 1; d < now.getDate(); d++) { const dt = new Date(y, m, d); if (dt.getDay() !== 0 && dt.getDay() !== 6) kerja++; }
+  const alpha = Math.max(0, kerja - hadir - izin);
+  return { hadir, telat, izin, alpha };
+}
+
+/* =========================================================
+   HALAMAN KARYAWAN: BERANDA
+   ========================================================= */
+function renderHome() {
+  const now = new Date();
+  const masuk = findToday("masuk"), pulang = findToday("pulang");
+  const st = monthStats(user.email);
+  $("#content").innerHTML = `
+    <div class="card greet">
+      <small>${sapaan()},</small>
+      <h2>${esc(user.nama)}</h2>
+      <div class="time" id="clockLine">${HARI[now.getDay()]}, ${now.getDate()} ${BULAN[now.getMonth()]} ${now.getFullYear()} &bull; ${hm(now)}</div>
+      <div class="chip">&#128339; Jadwal Kerja: ${WORK.start} - ${WORK.end}</div>
+      <div class="chip" style="margin-left:4px">&#128188; ${esc(user.jabatan || "-")}</div>
+    </div>
+
+    <div class="card">
+      <div class="quick">
+        <button onclick="go('absen')"><div class="ico" style="background:linear-gradient(135deg,#e11d48,#fb7185)">&#128247;</div>Absen</button>
+        <button onclick="go('kunjungan')"><div class="ico" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">&#128205;</div>Kunjungan</button>
+        <button onclick="go('izin')"><div class="ico" style="background:linear-gradient(135deg,#f59e0b,#fcd34d)">&#128221;</div>Izin</button>
+        <button onclick="go('histori')"><div class="ico" style="background:linear-gradient(135deg,#16a34a,#4ade80)">&#128338;</div>Histori</button>
+        <button onclick="go('profil')"><div class="ico" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">&#128100;</div>Profil</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Status Absensi Hari Ini</h3>
+      <div class="status-row">
+        <div class="status-box in"><small>Absen Masuk</small><b>${masuk ? masuk.jam : "--:--"}</b><span>${masuk ? masuk.status : "Belum absen"}</span></div>
+        <div class="status-box out"><small>Absen Pulang</small><b>${pulang ? pulang.jam : "--:--"}</b><span>${pulang ? "Sudah absen" : "Belum absen"}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Rekap Bulan ${BULAN[now.getMonth()]}</h3>
+      <div class="stat-grid">
+        <div class="stat s1"><b>${st.hadir}</b><small>Hadir</small></div>
+        <div class="stat s2"><b>${st.telat}</b><small>Terlambat</small></div>
+        <div class="stat s3"><b>${st.izin}</b><small>Izin / Cuti</small></div>
+        <div class="stat s4"><b>${st.alpha}</b><small>Alpha</small></div>
+      </div>
+    </div>`;
+  clockTimer = setInterval(() => {
+    const n = new Date(), el = $("#clockLine");
+    if (el) el.innerHTML = `${HARI[n.getDay()]}, ${n.getDate()} ${BULAN[n.getMonth()]} ${n.getFullYear()} &bull; ${hm(n)}:${pad(n.getSeconds())}`;
+  }, 1000);
+}
+
+/* =========================================================
+   KAMERA & GEOLOKASI
+   ========================================================= */
+async function startCam() {
+  const wrap = $("#camWrap"); if (!wrap) return;
+  try {
+    stopCam();
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 800 } }, audio: false });
+    const v = document.createElement("video"); v.id = "camVideo"; v.autoplay = true; v.playsInline = true; v.muted = true; v.srcObject = camStream;
+    wrap.innerHTML = ""; wrap.appendChild(v);
+    $("#btnShot").disabled = false; $("#btnShot").textContent = "Ambil Foto";
+  } catch (err) {
+    wrap.innerHTML = `<div class="cam-ph">Kamera tidak dapat diakses.<br>Izinkan akses kamera pada browser Anda lalu tekan "Buka Kamera".</div>`;
+    toast("Kamera gagal: " + (err.message || err.name));
+  }
+}
+function stopCam() { if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; } }
+
+function snapPhoto() {
+  const v = $("#camVideo");
+  if (!v || !v.videoWidth) { toast("Kamera belum siap."); return; }
+  const w = 360, h = Math.round(v.videoHeight / v.videoWidth * w);
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const ctx = cv.getContext("2d");
+  ctx.translate(w, 0); ctx.scale(-1, 1); ctx.drawImage(v, 0, 0, w, h); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // watermark waktu
+  const n = new Date(); ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, h - 26, w, 26);
+  ctx.fillStyle = "#fff"; ctx.font = "12px sans-serif"; ctx.fillText(`${ymd(n)} ${hm(n)}:${pad(n.getSeconds())}`, 8, h - 9);
+  capturedPhoto = cv.toDataURL("image/jpeg", 0.6);
+  stopCam();
+  $("#camWrap").innerHTML = `<img src="${capturedPhoto}" alt="selfie">`;
+  $("#btnShot").textContent = "Ulangi Foto";
+  $("#btnShot").onclick = () => { capturedPhoto = null; $("#btnShot").onclick = shotHandler; startCam(); };
+}
+function shotHandler() { snapPhoto(); }
+
+function getGeo(boxId) {
+  const box = $(boxId); if (!box) return;
+  box.className = "geo-box"; box.innerHTML = '&#128205; Mencari lokasi...';
+  if (!navigator.geolocation) { box.className = "geo-box err"; box.textContent = "Geolocation tidak didukung perangkat ini."; return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    geo = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+    box.className = "geo-box";
+    box.innerHTML = `&#128205; <b>Lokasi terdeteksi</b><br>Latitude: ${geo.lat.toFixed(6)}<br>Longitude: ${geo.lng.toFixed(6)}<br>Akurasi: &plusmn;${Math.round(geo.acc)} m`;
+  }, err => {
+    geo = null; box.className = "geo-box err";
+    box.innerHTML = "Lokasi gagal didapat: " + esc(err.message) + '<br><a href="#" onclick="getGeo(\'' + boxId + '\');return false" style="color:inherit;font-weight:700">Coba lagi</a>';
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+/* =========================================================
+   HALAMAN ABSEN
+   ========================================================= */
+function renderAbsen() {
+  const masuk = findToday("masuk"), pulang = findToday("pulang");
+  let tipe = !masuk ? "masuk" : (!pulang ? "pulang" : null);
+  geo = null; capturedPhoto = null;
+  if (!tipe) {
+    $("#content").innerHTML = `<div class="card"><div class="empty">&#9989; Anda sudah melakukan absen masuk (${masuk.jam}) dan pulang (${pulang.jam}) hari ini.<br><br><button class="btn btn-primary btn-sm" onclick="go('home')">Kembali ke Beranda</button></div></div>`;
+    return;
+  }
+  $("#content").innerHTML = `
+    <div class="card">
+      <h3>Absen ${tipe === "masuk" ? "Masuk" : "Pulang"}</h3>
+      <div class="field"><label>Jenis Absen</label>
+        <select id="absTipe"><option value="masuk" ${tipe === "masuk" ? "selected" : ""} ${masuk ? "disabled" : ""}>Absen Masuk</option><option value="pulang" ${tipe === "pulang" ? "selected" : ""} ${pulang ? "disabled" : ""}>Absen Pulang</option></select>
+      </div>
+      <div class="cam-wrap" id="camWrap"><div class="cam-ph">Tekan "Buka Kamera" untuk mengambil selfie.</div></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn btn-outline" style="margin:0" id="btnCam">Buka Kamera</button>
+        <button class="btn btn-dark" id="btnShot" disabled>Ambil Foto</button>
+      </div>
+      <div class="geo-box" id="geoBox"></div>
+      <div class="field"><label>Catatan (opsional)</label><textarea id="absNote" placeholder="Catatan singkat..."></textarea></div>
+      <button class="btn btn-primary" id="btnSubmitAbs">Kirim Absen</button>
+    </div>`;
+  $("#btnCam").onclick = startCam;
+  $("#btnShot").onclick = shotHandler;
+  $("#btnSubmitAbs").onclick = submitAbsen;
+  getGeo("#geoBox");
+  startCam();
+}
+
+function submitAbsen() {
+  const tipe = $("#absTipe").value;
+  if (findToday(tipe)) { toast("Absen " + tipe + " hari ini sudah dilakukan."); return; }
+  if (tipe === "pulang" && !findToday("masuk")) { toast("Lakukan absen masuk terlebih dahulu."); return; }
+  if (!capturedPhoto) { toast("Ambil foto selfie terlebih dahulu."); return; }
+  if (!geo) { toast("Lokasi belum terdeteksi. Aktifkan GPS lalu coba lagi."); getGeo("#geoBox"); return; }
+  const n = new Date();
+  const rec = {
+    id: Date.now(), email: user.email, kode: user.kode, nama: user.nama, lokasiKerja: user.lokasi,
+    tanggal: ymd(n), jam: hm(n), tipe, status: tipe === "masuk" ? statusMasuk(hm(n)) : "Pulang",
+    lat: geo.lat, lng: geo.lng, foto: capturedPhoto, catatan: $("#absNote").value.trim()
+  };
+  const all = DB.att(); all.push(rec);
+  if (DB.saveAtt(all)) { toast("Absen " + tipe + " berhasil pada " + rec.jam); stopCam(); go("home"); }
+}
+
+/* =========================================================
+   KUNJUNGAN
+   ========================================================= */
+function renderKunjungan() {
+  geo = null;
+  const list = DB.visit().filter(v => v.email === user.email).sort((a, b) => b.id - a.id).slice(0, 5);
+  $("#content").innerHTML = `
+    <div class="card">
+      <h3>Catat Kunjungan</h3>
+      <div class="field"><label>Nama Tempat / Klien</label><input id="kvNama" placeholder="Contoh: PT Maju Jaya"></div>
+      <div class="field"><label>Keperluan</label><textarea id="kvKeperluan" placeholder="Tujuan kunjungan..."></textarea></div>
+      <div class="geo-box" id="geoBoxKv"></div>
+      <button class="btn btn-primary" id="btnKv">Simpan Kunjungan</button>
+    </div>
+    <div class="card"><h3>Kunjungan Terakhir</h3>
+      ${list.length ? list.map(v => `<div class="list-item"><div class="li-ico">&#128205;</div><div class="li-body"><b>${esc(v.tempat)}</b><small>${fmtShort(v.tanggal)} ${v.jam} &bull; ${esc(v.keperluan)}</small></div></div>`).join("") : '<div class="empty">Belum ada kunjungan.</div>'}
+    </div>`;
+  getGeo("#geoBoxKv");
+  $("#btnKv").onclick = () => {
+    const tempat = $("#kvNama").value.trim(), kep = $("#kvKeperluan").value.trim();
+    if (!tempat || !kep) { toast("Lengkapi nama tempat dan keperluan."); return; }
+    if (!geo) { toast("Lokasi belum terdeteksi."); return; }
+    const n = new Date(); const all = DB.visit();
+    all.push({ id: Date.now(), email: user.email, nama: user.nama, tempat, keperluan: kep, tanggal: ymd(n), jam: hm(n), lat: geo.lat, lng: geo.lng });
+    if (DB.saveVisit(all)) { toast("Kunjungan tersimpan."); renderKunjungan(); }
+  };
+}
+
+/* =========================================================
+   IZIN & CUTI
+   ========================================================= */
+function renderIzin() {
+  const list = DB.leave().filter(l => l.email === user.email).sort((a, b) => b.id - a.id);
+  const today = ymd(new Date());
+  $("#content").innerHTML = `
+    <div class="card">
+      <h3>Form Pengajuan Izin &amp; Cuti</h3>
+      <div class="field"><label>Jenis</label>
+        <select id="izJenis"><option>Cuti Tahunan</option><option>Izin Sakit</option><option>Izin Pribadi</option><option>Cuti Melahirkan</option><option>Cuti Menikah</option><option>Lainnya</option></select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Tanggal Mulai</label><input type="date" id="izMulai" value="${today}"></div>
+        <div class="field"><label>Tanggal Selesai</label><input type="date" id="izSelesai" value="${today}"></div>
+      </div>
+      <div class="field"><label>Alasan</label><textarea id="izAlasan" placeholder="Jelaskan alasan pengajuan..."></textarea></div>
+      <div class="field"><label>Atasan / Supervisor</label><input id="izSpv" value="${esc(user.supervisor || "")}" readonly></div>
+      <button class="btn btn-primary" id="btnIzin">Ajukan</button>
+    </div>
+    <div class="card"><h3>Riwayat Pengajuan</h3>
+      ${list.length ? list.map(l => `<div class="list-item"><div class="li-ico">&#128221;</div><div class="li-body"><b>${esc(l.jenis)}</b><small>${fmtShort(l.mulai)} - ${fmtShort(l.selesai)}</small><small>${esc(l.alasan)}</small>${l.diputuskanOleh ? `<small>Diproses: ${esc(l.diputuskanOleh)}${l.catatan ? " &bull; Catatan: " + esc(l.catatan) : ""}</small>` : ""}</div>${badgeStatus(l.status)}</div>`).join("") : '<div class="empty">Belum ada pengajuan.</div>'}
+    </div>`;
+  $("#btnIzin").onclick = () => {
+    const mulai = $("#izMulai").value, selesai = $("#izSelesai").value, alasan = $("#izAlasan").value.trim();
+    if (!mulai || !selesai || !alasan) { toast("Lengkapi semua isian."); return; }
+    if (selesai < mulai) { toast("Tanggal selesai tidak boleh sebelum tanggal mulai."); return; }
+    const all = DB.leave();
+    all.push({ id: Date.now(), email: user.email, kode: user.kode, nama: user.nama, supervisor: user.supervisor, jenis: $("#izJenis").value, mulai, selesai, alasan, status: "Menunggu", diajukan: ymd(new Date()) });
+    if (DB.saveLeave(all)) { toast("Pengajuan terkirim."); renderIzin(); }
+  };
+}
+function badgeStatus(s) {
+  const c = s === "Disetujui" ? "b-green" : s === "Ditolak" ? "b-red" : "b-orange";
+  return `<span class="badge ${c}">${esc(s)}</span>`;
+}
+
+/* =========================================================
+   HISTORI
+   ========================================================= */
+function renderHistori() {
+  const att = myAtt().sort((a, b) => b.id - a.id);
+  const lv = DB.leave().filter(l => l.email === user.email).sort((a, b) => b.id - a.id);
+  const vs = DB.visit().filter(v => v.email === user.email).sort((a, b) => b.id - a.id);
+  let body = "";
+  if (histTab === "absen") {
+    body = att.length ? att.map(a => `<div class="list-item">
+      <img src="${a.foto}" onclick="viewPhoto(this.src)" alt="">
+      <div class="li-body"><b>Absen ${a.tipe === "masuk" ? "Masuk" : "Pulang"} &bull; ${a.jam}</b><small>${fmtTanggal(a.tanggal)}</small><small>${a.lat.toFixed(5)}, ${a.lng.toFixed(5)}</small></div>
+      <span class="badge ${a.status === "Terlambat" ? "b-orange" : a.tipe === "pulang" ? "b-blue" : "b-green"}">${a.status}</span></div>`).join("") : '<div class="empty">Belum ada data absensi.</div>';
+  } else if (histTab === "izin") {
+    body = lv.length ? lv.map(l => `<div class="list-item"><div class="li-ico">&#128221;</div><div class="li-body"><b>${esc(l.jenis)}</b><small>${fmtShort(l.mulai)} - ${fmtShort(l.selesai)}</small>${l.catatan ? `<small>Catatan: ${esc(l.catatan)}</small>` : ""}</div>${badgeStatus(l.status)}</div>`).join("") : '<div class="empty">Belum ada pengajuan izin.</div>';
+  } else {
+    body = vs.length ? vs.map(v => `<div class="list-item"><div class="li-ico">&#128205;</div><div class="li-body"><b>${esc(v.tempat)}</b><small>${fmtShort(v.tanggal)} ${v.jam}</small><small>${esc(v.keperluan)}</small></div></div>`).join("") : '<div class="empty">Belum ada kunjungan.</div>';
+  }
+  $("#content").innerHTML = `
+    <div class="card">
+      <div class="tabs">
+        <button class="${histTab === "absen" ? "active" : ""}" data-t="absen">Absensi</button>
+        <button class="${histTab === "izin" ? "active" : ""}" data-t="izin">Izin &amp; Cuti</button>
+        <button class="${histTab === "kunjungan" ? "active" : ""}" data-t="kunjungan">Kunjungan</button>
+      </div>${body}
+    </div>`;
+  $("#content").querySelectorAll(".tabs button").forEach(b => b.onclick = () => { histTab = b.dataset.t; renderHistori(); });
+}
+
+/* =========================================================
+   PROFIL & UBAH PASSWORD
+   ========================================================= */
+function renderProfil() {
+  $("#content").innerHTML = `
+    <div class="card">
+      <div class="profile-top"><div class="avatar">${esc(initials(user.nama))}</div><b style="font-size:17px;color:var(--dark)">${esc(user.nama)}</b><div style="color:var(--muted);font-size:12px">${esc(user.email)}</div></div>
+      <div class="kv"><span>Kode Karyawan</span><b>${esc(user.kode || "-")}</b></div>
+      <div class="kv"><span>Jabatan</span><b>${esc(user.jabatan || "-")}</b></div>
+      <div class="kv"><span>Supervisor</span><b>${esc(user.supervisor || "-")}</b></div>
+      <div class="kv"><span>Lokasi Penempatan</span><b>${esc(user.lokasi || "-")}</b></div>
+    </div>
+    <div class="card">
+      <h3>Ubah Password</h3>
+      <div class="field"><label>Password Lama</label><input type="password" id="pwOld" autocomplete="current-password"></div>
+      <div class="field"><label>Password Baru</label><input type="password" id="pwNew" autocomplete="new-password"></div>
+      <div class="field"><label>Konfirmasi Password Baru</label><input type="password" id="pwNew2" autocomplete="new-password"></div>
+      <button class="btn btn-primary" id="btnPw">Simpan Password</button>
+    </div>
+    <button class="btn btn-outline" onclick="logout()">Keluar dari Akun</button>`;
+  $("#btnPw").onclick = () => {
+    const o = $("#pwOld").value, n = $("#pwNew").value, n2 = $("#pwNew2").value;
+    const map = DB.pw();
+    const current = map[user.email] || (SPECIAL[user.email] ? SPECIAL[user.email].pass : DEFAULT_EMP_PASS);
+    if (o !== current) { toast("Password lama salah."); return; }
+    if (n.length < 6) { toast("Password baru minimal 6 karakter."); return; }
+    if (n !== n2) { toast("Konfirmasi password tidak sama."); return; }
+    map[user.email] = n;
+    if (DB.savePw(map)) { toast("Password berhasil diubah."); $("#pwOld").value = $("#pwNew").value = $("#pwNew2").value = ""; }
+  };
+}
+
+/* =========================================================
+   ADMIN / HRD
+   ========================================================= */
+async function loadEmployees(force) {
+  if (employeesCache && !force) return employeesCache;
+  const { data, error } = await sb.from(TABLE).select("*");
+  if (error) { toast("Gagal memuat karyawan: " + error.message); return employeesCache || []; }
+  employeesCache = data || []; return employeesCache;
+}
+
+async function renderDash() {
+  const t = ymd(new Date());
+  $("#content").innerHTML = `<div class="card"><div class="empty">Memuat data...</div></div>`;
+  const emps = await loadEmployees();
+  if (view !== "dash") return;
+  const att = DB.att(); const todayIn = att.filter(a => a.tanggal === t && a.tipe === "masuk");
+  const telat = todayIn.filter(a => a.status === "Terlambat").length;
+  const leaves = DB.leave(); const pending = leaves.filter(l => l.status === "Menunggu").length;
+  const onLeave = leaves.filter(l => l.status === "Disetujui" && l.mulai <= t && l.selesai >= t).length;
+  const belum = Math.max(0, emps.length - todayIn.length - onLeave);
+  const recent = att.slice().sort((a, b) => b.id - a.id).slice(0, 6);
+  $("#content").innerHTML = `
+    <div class="admin-stats">
+      <div class="stat s3"><b>${emps.length}</b><small>Total Karyawan</small></div>
+      <div class="stat s1"><b>${todayIn.length}</b><small>Hadir Hari Ini</small></div>
+      <div class="stat s2"><b>${telat}</b><small>Terlambat</small></div>
+      <div class="stat s4"><b>${belum}</b><small>Belum Absen</small></div>
+    </div>
+    ${pendingApprovalCard()}
+    <div class="card"><h3>Aktivitas Absensi Terbaru</h3>
+      ${recent.length ? recent.map(a => `<div class="list-item"><img src="${a.foto}" onclick="viewPhoto(this.src)" alt=""><div class="li-body"><b>${esc(a.nama)}</b><small>${a.tipe === "masuk" ? "Masuk" : "Pulang"} ${a.jam} &bull; ${fmtShort(a.tanggal)}</small></div><span class="badge ${a.status === "Terlambat" ? "b-orange" : "b-green"}">${a.status}</span></div>`).join("") : '<div class="empty">Belum ada aktivitas.</div>'}
+    </div>
+    <div class="card noprint"><h3>Cetak Laporan</h3><button class="btn btn-dark btn-sm" onclick="go('adm_lap')">Buka Halaman Laporan</button></div>`;
+}
+
+function renderAdmAbsen() {
+  const t = ymd(new Date());
+  $("#content").innerHTML = `
+    <div class="card">
+      <div class="toolbar noprint">
+        <input type="date" id="fDate" value="${t}">
+        <input type="text" id="fQ" placeholder="Cari nama / kode...">
+        <button class="btn btn-dark btn-sm" id="btnPrintAbs">&#128424; Cetak</button>
+      </div>
+      <div class="print-head"><h2>Laporan Absensi Karyawan</h2><div id="phSub"></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Tanggal</th><th>Kode</th><th>Nama</th><th>Tipe</th><th>Jam</th><th>Status</th><th>Latitude</th><th>Longitude</th></tr></thead><tbody id="tbAbs"></tbody></table></div>
+    </div>`;
+  const draw = () => {
+    const d = $("#fDate").value, q = $("#fQ").value.toLowerCase();
+    const rows = DB.att().filter(a => (!d || a.tanggal === d) && (!q || (a.nama + a.kode).toLowerCase().includes(q))).sort((a, b) => b.id - a.id);
+    $("#phSub").textContent = d ? "Tanggal: " + fmtTanggal(d) : "Semua Tanggal";
+    $("#tbAbs").innerHTML = rows.length ? rows.map(a => `<tr><td><img src="${a.foto}" onclick="viewPhoto(this.src)" alt=""></td><td>${fmtShort(a.tanggal)}</td><td>${esc(a.kode)}</td><td>${esc(a.nama)}</td><td>${a.tipe}</td><td>${a.jam}</td><td>${a.status}</td><td>${a.lat.toFixed(6)}</td><td>${a.lng.toFixed(6)}</td></tr>`).join("") : '<tr><td colspan="9" class="empty">Tidak ada data.</td></tr>';
+  };
+  $("#fDate").oninput = draw; $("#fQ").oninput = draw; $("#btnPrintAbs").onclick = () => window.print(); draw();
+}
+
+let izinFilter = "Menunggu";
+function renderAdmIzin() {
+  const all = DB.leave().sort((a, b) => b.id - a.id);
+  const cnt = s => s === "Semua" ? all.length : all.filter(l => l.status === s).length;
+  const list = izinFilter === "Semua" ? all : all.filter(l => l.status === izinFilter);
+  $("#content").innerHTML = `
+    <div class="card">
+      <div class="print-head"><h2>Laporan Pengajuan Izin &amp; Cuti</h2></div>
+      <div class="tabs noprint">${["Menunggu", "Disetujui", "Ditolak", "Semua"].map(s => `<button class="${izinFilter === s ? "active" : ""}" onclick="izinFilter='${s}';renderAdmIzin()">${s} (${cnt(s)})</button>`).join("")}</div>
+      <div class="toolbar noprint"><button class="btn btn-dark btn-sm" onclick="window.print()">&#128424; Cetak</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Diajukan</th><th>Kode</th><th>Nama</th><th>Jenis</th><th>Mulai</th><th>Selesai</th><th>Alasan</th><th>Status</th><th class="noprint">Aksi</th></tr></thead><tbody>
+      ${list.length ? list.map(l => `<tr><td>${fmtShort(l.diajukan)}</td><td>${esc(l.kode)}</td><td>${esc(l.nama)}</td><td>${esc(l.jenis)}</td><td>${fmtShort(l.mulai)}</td><td>${fmtShort(l.selesai)}</td><td style="white-space:normal;min-width:140px">${esc(l.alasan)}</td><td>${badgeStatus(l.status)}${l.diputuskanOleh ? `<div style="font-size:10.5px;color:var(--muted);margin-top:3px;white-space:normal">oleh ${esc(l.diputuskanOleh)}${l.diputuskanPada ? " &bull; " + esc(l.diputuskanPada) : ""}${l.catatan ? "<br>Catatan: " + esc(l.catatan) : ""}</div>` : ""}</td>
+      <td class="noprint">${l.status === "Menunggu" ? `<div class="row-actions"><button class="btn btn-green btn-sm" onclick="openDecision(${l.id},'Disetujui')">ACC</button><button class="btn btn-primary btn-sm" onclick="openDecision(${l.id},'Ditolak')">Tolak</button></div>` : "-"}</td></tr>`).join("") : '<tr><td colspan="9" class="empty">Tidak ada pengajuan pada kategori ini.</td></tr>'}
+      </tbody></table></div>
+    </div>`;
+}
+function leaveDays(l) {
+  const a = new Date(l.mulai + "T00:00:00"), b = new Date(l.selesai + "T00:00:00");
+  return Math.round((b - a) / 86400000) + 1;
+}
+
+/* Kartu persetujuan (dipakai di Dashboard Admin & HRD) */
+function pendingApprovalCard() {
+  const list = DB.leave().filter(l => l.status === "Menunggu").sort((a, b) => a.id - b.id);
+  return `<div class="card"><h3>Persetujuan Cuti &amp; Izin ${list.length ? `<span class="badge b-orange">${list.length} menunggu</span>` : ""}</h3>
+    ${list.length ? list.map(l => `<div class="appr-item">
+      <div class="li-body">
+        <b>${esc(l.nama)} <small style="display:inline">(${esc(l.kode)})</small></b>
+        <small>${esc(l.jenis)} &bull; ${fmtShort(l.mulai)} - ${fmtShort(l.selesai)} (${leaveDays(l)} hari)</small>
+        <small>Alasan: ${esc(l.alasan)}</small>
+        <small>Diajukan ${fmtShort(l.diajukan)}${l.supervisor ? " &bull; Atasan: " + esc(l.supervisor) : ""}</small>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-green btn-sm" onclick="openDecision(${l.id},'Disetujui')">ACC</button>
+        <button class="btn btn-primary btn-sm" onclick="openDecision(${l.id},'Ditolak')">Tolak</button>
+      </div></div>`).join("") : '<div class="empty" style="padding:8px 0">Tidak ada pengajuan yang menunggu persetujuan.</div>'}
+    <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="go('adm_izin')">Lihat Semua Pengajuan</button></div>`;
+}
+
+function openDecision(id, status) {
+  const l = DB.leave().find(x => x.id === id); if (!l) return;
+  if (l.status !== "Menunggu") { toast("Pengajuan ini sudah diproses."); refreshApproval(); return; }
+  closeDecision();
+  const acc = status === "Disetujui";
+  const d = document.createElement("div"); d.className = "dlg"; d.id = "dlg";
+  d.innerHTML = `<div class="dlg-card">
+    <h3>${acc ? "ACC / Setujui" : "Tolak"} Pengajuan</h3>
+    <div class="kv"><span>Karyawan</span><b>${esc(l.nama)} (${esc(l.kode)})</b></div>
+    <div class="kv"><span>Jenis</span><b>${esc(l.jenis)}</b></div>
+    <div class="kv"><span>Tanggal</span><b>${fmtShort(l.mulai)} - ${fmtShort(l.selesai)} (${leaveDays(l)} hari)</b></div>
+    <div class="kv"><span>Alasan</span><b style="max-width:60%">${esc(l.alasan)}</b></div>
+    <div class="field" style="margin-top:14px"><label>Catatan ${acc ? "(opsional)" : "(wajib diisi)"}</label>
+      <textarea id="dlgNote" placeholder="${acc ? "Contoh: Disetujui, harap serah terima pekerjaan." : "Tuliskan alasan penolakan..."}"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" style="margin:0" onclick="closeDecision()">Batal</button>
+      <button class="btn ${acc ? "btn-green" : "btn-primary"}" onclick="confirmDecision(${id},'${status}')">${acc ? "Ya, ACC" : "Ya, Tolak"}</button>
+    </div></div>`;
+  d.addEventListener("click", e => { if (e.target === d) closeDecision(); });
+  document.body.appendChild(d);
+}
+function closeDecision() { const d = $("#dlg"); if (d) d.remove(); }
+
+function confirmDecision(id, status) {
+  const note = ($("#dlgNote").value || "").trim();
+  if (status === "Ditolak" && !note) { toast("Catatan penolakan wajib diisi."); return; }
+  const all = DB.leave(); const l = all.find(x => x.id === id); if (!l) return;
+  if (l.status !== "Menunggu") { closeDecision(); toast("Pengajuan ini sudah diproses."); refreshApproval(); return; }
+  const n = new Date();
+  l.status = status; l.catatan = note;
+  l.diputuskanOleh = `${user.nama} (${user.role === "hrd" ? "HRD" : "Admin"})`;
+  l.diputuskanPada = `${fmtShort(ymd(n))} ${hm(n)}`;
+  if (DB.saveLeave(all)) {
+    closeDecision();
+    toast(`Pengajuan ${l.nama} ${status === "Disetujui" ? "di-ACC" : "ditolak"}.`);
+    refreshApproval();
+  }
+}
+function refreshApproval() {
+  updateBadge();
+  if (view === "dash") renderDash(); else if (view === "adm_izin") renderAdmIzin();
+}
+function updateBadge() {
+  if (!isAdmin()) return;
+  const n = DB.leave().filter(l => l.status === "Menunggu").length;
+  document.querySelectorAll('#bottomNav button[data-v="adm_izin"], #drNav button[data-v="adm_izin"]').forEach(b => {
+    const old = b.querySelector(".nbadge"); if (old) old.remove();
+    if (n > 0) { const s = document.createElement("span"); s.className = "nbadge"; s.textContent = n; b.appendChild(s); }
+  });
+}
+
+async function renderAdmKar() {
+  $("#content").innerHTML = `<div class="card"><div class="empty">Memuat data karyawan...</div></div>`;
+  const emps = await loadEmployees(true);
+  if (view !== "adm_kar") return;
+  $("#content").innerHTML = `
+    <div class="card">
+      <div class="print-head"><h2>Daftar Karyawan</h2></div>
+      <div class="toolbar noprint"><input id="kQ" placeholder="Cari nama / kode / email..."><button class="btn btn-dark btn-sm" onclick="window.print()">&#128424; Cetak</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Kode Karyawan</th><th>Nama</th><th>E-mail</th><th>Jabatan</th><th>Supervisor</th><th>Lokasi Penempatan</th></tr></thead><tbody id="tbKar"></tbody></table></div>
+    </div>`;
+  const draw = () => {
+    const q = $("#kQ").value.toLowerCase();
+    const rows = emps.filter(r => ["Kode Karyawan", "Nama", "email"].map(k => String(getField(r, k))).join(" ").toLowerCase().includes(q));
+    $("#tbKar").innerHTML = rows.length ? rows.map(r => `<tr><td>${esc(getField(r, "Kode Karyawan"))}</td><td>${esc(getField(r, "Nama"))}</td><td>${esc(getField(r, "email"))}</td><td>${esc(getField(r, "Jabatan"))}</td><td>${esc(getField(r, "Supervisor"))}</td><td>${esc(getField(r, "Lokasi Penempatan"))}</td></tr>`).join("") : '<tr><td colspan="6" class="empty">Tidak ada data.</td></tr>';
+  };
+  $("#kQ").oninput = draw; draw();
+}
+
+async function renderAdmLap() {
+  const now = new Date();
+  $("#content").innerHTML = `<div class="card"><div class="empty">Menyiapkan laporan...</div></div>`;
+  const emps = await loadEmployees();
+  if (view !== "adm_lap") return;
+  $("#content").innerHTML = `
+    <div class="card">
+      <div class="toolbar noprint">
+        <select id="lapBln">${BULAN.map((b, i) => `<option value="${i}" ${i === now.getMonth() ? "selected" : ""}>${b}</option>`).join("")}</select>
+        <input type="number" id="lapThn" value="${now.getFullYear()}" min="2020" max="2100">
+        <button class="btn btn-dark btn-sm" onclick="window.print()">&#128424; Cetak Laporan</button>
+      </div>
+      <div class="print-head"><h2>Laporan Rekap Absensi Bulanan</h2><div id="lapSub"></div></div>
+      <div class="table-wrap"><table><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Jabatan</th><th>Hadir</th><th>Terlambat</th><th>Izin/Cuti</th><th>Alpha</th></tr></thead><tbody id="tbLap"></tbody></table></div>
+      <p style="margin-top:12px;font-size:11px;color:var(--muted)">Dicetak pada ${fmtTanggal(ymd(now))} oleh ${esc(user.nama)}</p>
+    </div>`;
+  const draw = () => {
+    const m = +$("#lapBln").value, y = +$("#lapThn").value, pre = `${y}-${pad(m + 1)}`;
+    $("#lapSub").textContent = `Periode: ${BULAN[m]} ${y}`;
+    const att = DB.att().filter(a => a.tanggal.startsWith(pre) && a.tipe === "masuk");
+    const leaves = DB.leave().filter(l => l.status === "Disetujui");
+    const isCurrent = (y === now.getFullYear() && m === now.getMonth());
+    const last = isCurrent ? now.getDate() - 1 : new Date(y, m + 1, 0).getDate();
+    let kerja = 0; for (let d = 1; d <= last; d++) { const dt = new Date(y, m, d); if (dt.getDay() !== 0 && dt.getDay() !== 6) kerja++; }
+    $("#tbLap").innerHTML = emps.length ? emps.map((r, i) => {
+      const email = String(getField(r, "email")).toLowerCase();
+      const mine = att.filter(a => a.email === email);
+      const hadir = new Set(mine.map(a => a.tanggal)).size, telat = mine.filter(a => a.status === "Terlambat").length;
+      let izin = 0;
+      leaves.filter(l => l.email === email).forEach(l => { let d = new Date(l.mulai + "T00:00:00"); const e = new Date(l.selesai + "T00:00:00"); while (d <= e) { if (d.getMonth() === m && d.getFullYear() === y && d.getDay() !== 0 && d.getDay() !== 6) izin++; d.setDate(d.getDate() + 1); } });
+      const alpha = Math.max(0, kerja - hadir - izin);
+      return `<tr><td>${i + 1}</td><td>${esc(getField(r, "Kode Karyawan"))}</td><td>${esc(getField(r, "Nama"))}</td><td>${esc(getField(r, "Jabatan"))}</td><td>${hadir}</td><td>${telat}</td><td>${izin}</td><td>${alpha}</td></tr>`;
+    }).join("") : '<tr><td colspan="8" class="empty">Data karyawan kosong.</td></tr>';
+  };
+  $("#lapBln").onchange = draw; $("#lapThn").oninput = draw; draw();
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+if (user) startApp();
+</script>
+</body>
+</html>
