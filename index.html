@@ -531,11 +531,11 @@ function monthStats(email) {
   let izin = 0;
   leaves.forEach(l => {
     let d = new Date(l.mulai + "T00:00:00"); const e = new Date(l.selesai + "T00:00:00");
-    while (d <= e) { if (d.getMonth() === m && d.getFullYear() === y && d.getDay() !== 0 && d.getDay() !== 6) izin++; d.setDate(d.getDate() + 1); }
+    while (d <= e) { if (d.getMonth() === m && d.getFullYear() === y && d.getDate() <= now.getDate() && d.getDay() !== 0 && d.getDay() !== 6) izin++; d.setDate(d.getDate() + 1); }
   });
-  // hari kerja yang sudah lewat (sebelum hari ini)
+  // hari kerja dari tanggal 1 sampai hari ini (termasuk hari ini)
   let kerja = 0;
-  for (let d = 1; d < now.getDate(); d++) { const dt = new Date(y, m, d); if (dt.getDay() !== 0 && dt.getDay() !== 6) kerja++; }
+  for (let d = 1; d <= now.getDate(); d++) { const dt = new Date(y, m, d); if (dt.getDay() !== 0 && dt.getDay() !== 6) kerja++; }
   const alpha = Math.max(0, kerja - hadir - izin);
   return { hadir, telat, izin, alpha };
 }
@@ -820,7 +820,6 @@ function rekapBulanHtml() {
     else if (cuti) { st = "Izin/Cuti"; cls = "b-blue"; }
     else if (weekend) { st = "Libur"; cls = "b-gray"; }
     else if (tgl > todayStr) { st = "-"; cls = "b-gray"; }
-    else if (tgl === todayStr) { st = "Belum absen"; cls = "b-orange"; }
     else { st = "Alpha"; cls = "b-red"; }
     rows += `<tr${tgl === todayStr ? ' style="background:#fff1f2"' : ""}><td>${d} ${HARI[dt.getDay()].slice(0, 3)}</td><td>${masuk ? masuk.jam : "-"}</td><td>${pulang ? pulang.jam : "-"}</td><td><span class="badge ${cls}">${st}</span></td></tr>`;
   }
@@ -1081,14 +1080,16 @@ async function renderAdmLap() {
     const att = DB.att().filter(a => a.tanggal.startsWith(pre) && a.tipe === "masuk");
     const leaves = DB.leave().filter(l => l.status === "Disetujui");
     const isCurrent = (y === now.getFullYear() && m === now.getMonth());
-    const last = isCurrent ? now.getDate() - 1 : new Date(y, m + 1, 0).getDate();
+    const isFuture = (y > now.getFullYear()) || (y === now.getFullYear() && m > now.getMonth());
+    // bulan berjalan: tgl 1 s/d hari ini; bulan lalu: tgl 1 s/d akhir bulan; bulan depan: belum dihitung
+    const last = isFuture ? 0 : isCurrent ? now.getDate() : new Date(y, m + 1, 0).getDate();
     let kerja = 0; for (let d = 1; d <= last; d++) { const dt = new Date(y, m, d); if (dt.getDay() !== 0 && dt.getDay() !== 6) kerja++; }
     $("#tbLap").innerHTML = emps.length ? emps.map((r, i) => {
       const email = String(getField(r, "email")).toLowerCase();
       const mine = att.filter(a => a.email === email);
       const hadir = new Set(mine.map(a => a.tanggal)).size, telat = mine.filter(a => a.status === "Terlambat").length;
       let izin = 0;
-      leaves.filter(l => l.email === email).forEach(l => { let d = new Date(l.mulai + "T00:00:00"); const e = new Date(l.selesai + "T00:00:00"); while (d <= e) { if (d.getMonth() === m && d.getFullYear() === y && d.getDay() !== 0 && d.getDay() !== 6) izin++; d.setDate(d.getDate() + 1); } });
+      leaves.filter(l => l.email === email).forEach(l => { let d = new Date(l.mulai + "T00:00:00"); const e = new Date(l.selesai + "T00:00:00"); while (d <= e) { if (d.getMonth() === m && d.getFullYear() === y && d.getDate() <= last && d.getDay() !== 0 && d.getDay() !== 6) izin++; d.setDate(d.getDate() + 1); } });
       const alpha = Math.max(0, kerja - hadir - izin);
       return `<tr><td>${i + 1}</td><td>${esc(getField(r, "Kode Karyawan"))}</td><td>${esc(getField(r, "Nama"))}</td><td>${esc(getField(r, "Jabatan"))}</td><td>${hadir}</td><td>${telat}</td><td>${izin}</td><td>${alpha}</td></tr>`;
     }).join("") : '<tr><td colspan="8" class="empty">Data karyawan kosong.</td></tr>';
